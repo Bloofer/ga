@@ -3,6 +3,8 @@
 #include <stdlib.h>     /* srand, rand */
 #include <time.h>       /* time */
 #include <cstring>
+#include <fstream>
+#include <string>
 
 using namespace std;
 
@@ -12,7 +14,6 @@ using namespace std;
 
 // functions getting input info
 void read_file();
-void get_graph_data();
 
 // main functions
 void init_popluation(); // initialize popluation to start evolution

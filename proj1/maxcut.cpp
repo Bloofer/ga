@@ -39,9 +39,11 @@ Chromosome population[n]; // n varies on the result
  * Function definitions
  */
 
-// functions getting input info
+// initial functions & functions getting input info
 void read_file();
-void get_graph_data();
+void init();
+void init_popluation(); // initialize popluation to start evolution
+void init_chromosome(Chromosome& ch); // initialize choromosome. used in init_population()
 
 // function pointer
 int compare_quality(const void* c1, const void* c2); // used for qsort
@@ -58,8 +60,7 @@ void replacement(Chromosome* offsprings); // replacement of population(?)
 void check_timeout(); // check 3 minutes (proj timeout)
 
 // main functions
-void init_popluation(); // initialize popluation to start evolution
-void evolve(); // evolve 1 generation
+void ga(); // ga 1 generation
 
 // logging functions
 void check_generation(); // check generation count
@@ -71,6 +72,7 @@ void report_best_solution(); // reports the final best solution
 // test & print functions
 void print_chromosome(const Chromosome* ch);
 void print_population();
+void print_graph();
 void test_selection();
 void test_crossover();
 void test_mutation();
@@ -178,9 +180,8 @@ void replacement(Chromosome* offsprings)
 {
     /*
      * genitor-style replacement (replace worst k solutions with offsprings)
+     * TODO: finish this impl
      */
-
-    int* karr = (int*) malloc(sizeof(int) * k); 
 
     // 1. sort solutions by quality
     qsort(population, n, sizeof(Chromosome), compare_quality);
@@ -214,12 +215,29 @@ void qualify_chromosome(Chromosome &ch)
         fromVertex = edges[i].from;
 
         // add weight of the edge if two vertices are inverted
-        if (ch.gene[toVertex] != ch.gene[fromVertex]) ch.quality += edges[i].weight;
+        if (ch.gene[toVertex-1] != ch.gene[fromVertex-1]) ch.quality += edges[i].weight;
 
     }
 }
 
-void evolve()
+void init_chromosome(Chromosome& ch)
+{
+    for(int i=0; i<edgeNum; i++){
+        ch.gene[i] = rand()%2;
+    }
+    qualify_chromosome(ch);
+}
+
+// initial function for creating new population
+void init_popluation()
+{
+    // creates population(solution set) by random
+    for(int i=0; i<n; i++){
+        init_chromosome(population[i]);
+    }
+}
+
+void ga()
 {
 
     bool stopCondition = false;
@@ -269,9 +287,22 @@ void print_chromosome(const Chromosome& ch)
 void print_population()
 {
 
+    printf("Number of population: %d\n\n",n);
     for(int i=0; i<n; i++){
         print_chromosome(population[i]);
     }
+
+}
+
+void print_graph()
+{
+
+    printf("========== print graph data ==========\n");
+    printf("Vertex#: %d\tEdge#:%d\n",vertexNum,edgeNum);
+    for(int i=0; i<edgeNum; i++){
+        printf("%d\t%d\t%d\n",edges[i].from,edges[i].to,edges[i].weight);
+    }
+    printf("======================================\n\n");
 
 }
 
@@ -326,13 +357,54 @@ void test_replacement(){
 
 }
 
+
+
+/*
+ * Initial functions & File read function
+ */
+
+// reads file and renders to graph data structure
+void read_file(char* fileName){
+
+    ifstream gfile(fileName);
+    string firstLine; // string variable to parse first line of the file
+    //getline(gfile, firstLine);
+    gfile >> vertexNum >> edgeNum;
+
+    int from, to, weight;
+    int edgeIndex = 0;
+    while (gfile >> from >> to >> weight){
+        edges[edgeIndex].from = from;
+        edges[edgeIndex].to = to;
+        edges[edgeIndex].weight = weight;
+        edgeIndex++;
+    }
+
+}
+
+void init()
+{
+    // TODO: reset mem of the edges[] & Chromosome.gene
+    // is it OK to give longer size of the array and use less?
+
+    // marks start time of the program
+    clock_t startTime = clock();
+
+    // sets random timer to srand()
+    srand(time(NULL));
+
+    init_popluation();
+    print_population(); // just for test.
+
+}
+
+
 // just for tests. need to be replaced
 int main(int argc, char** argv)
 {
 
     // TODO: this should be put on init function
-/*     clock_t startTime = clock();
-
+/* 
     while(true){
 
         clock_t currentTime = clock();
@@ -350,37 +422,23 @@ int main(int argc, char** argv)
 
     } */
 
-    /* TEST print_chromosome */
-    
-    /* for(int i=0; i<n; i++){
+    /*
+     * File read test
+     */
 
-        Chromosome test_ch;
-        for(int i=0; i<vertexNum; i++){
-            // test case 010101...
-            if ((i%2)==0) test_ch.gene[i] = 0;
-            else test_ch.gene[i] = 1;
-        }
-        test_ch.quality = 100;
-
-        population[i] = test_ch;
-
+    if (argc < 2) {
+        cerr << "Usage: " << argv[0] << " GRAPHFILE" << endl;
+        return 1;
     }
 
-    print_population(); */
+    read_file(argv[1]);
+    init();
 
+    //print_graph();
     //test_selection();
-    
-
-    // random time setter. TODO: this should be put on init function
-    srand(time(NULL));
-    int rand_num = rand();
-
-
     //test_crossover();
     //test_mutation();
 
-
-    cout << rand_num << endl;
 
     return 0;
 
