@@ -5,6 +5,8 @@
 #include <cstring>
 #include <fstream>
 #include <string>
+#include <cmath>
+#include <numeric>
 
 using namespace std;
 

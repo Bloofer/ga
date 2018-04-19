@@ -6,19 +6,29 @@ using namespace std;
  */
 
 // GA variables
-const int maxVertexNum = 500;
-const int maxEdgeNum = 5000;
-const int timeConstraint = 180;
+const int maxVertexNum = 1000;
+const int maxEdgeNum = 10000;
+const int timeConstraint = 175.0;
 
 const int n = 20; // size of population (need tuning?)
 const int k = 4;  // size of replacement (need tuning?)
 
-// input informations (TODO: need to be initialized)
-int vertexNum = 40;
-int edgeNum = 100;
+// input informations. inititalized on read_file() 
+int vertexNum;
+int edgeNum;
 
 // probabilities of mutation
 float mutationProb = 0.015; // or 0.01? depends on the result
+
+// ga quality logging
+int generation_count;
+
+// fitness array used for roulette wheel algorithm
+float fitness[n];
+
+// timer variables
+clock_t startTime;
+clock_t currentTime;
 
 // graph data holding weight info
 typedef struct{
@@ -32,6 +42,32 @@ typedef struct{
     int quality; // total weight of the cuts
 }Chromosome;
 Chromosome population[n]; // n varies on the result
+
+// GA options to select operator strategy
+typedef enum{
+    RANDOM, // random pick of two parents
+    ROULETTE_WHEEL // selection based on fitness function
+} Selection_strategy;
+Selection_strategy selectionType = RANDOM;
+
+typedef enum{
+    ONE_POINT, // random one point crossover
+    TWO_POINT // random two point crossover
+} Crossover_strategy;
+Crossover_strategy crossoverType = ONE_POINT;
+
+/* // TODO: maybe remove this?
+typedef enum{
+    UNIFORM,
+    NON_UNIFORM
+} Mutation_strategy;
+Mutation_strategy mutationType = UNIFORM;
+
+typedef enum{
+    GENITOR_STYLE, // replace worst k popluation
+    PRESELECTION // replace one of the parents
+} Replacement_strategy;
+Replacement_strategy replacementType = GENITOR_STYLE; */
 
 
 
@@ -48,6 +84,9 @@ void init_chromosome(Chromosome& ch); // initialize choromosome. used in init_po
 // function pointer
 int compare_quality(const void* c1, const void* c2); // used for qsort
 
+// calculates fitness array
+void calculate_fitness();
+
 // GA operators
 void qualify_chromosome(Chromosome &ch); // get quality of particular chromosome (=evaluate cuts)
 void qualify_popluation(); // get quality of population (all chromosomes)
@@ -57,7 +96,7 @@ void mutation(Chromosome &ch); // mutation of chromosome
 void replacement(Chromosome* offsprings); // replacement of population(?)
 
 // time checkers (to comply time restrictions)
-void check_timeout(); // check 3 minutes (proj timeout)
+bool check_timeout(); // check 3 minutes (proj timeout)
 
 // main functions
 void ga(); // ga 1 generation
@@ -67,12 +106,15 @@ void check_generation(); // check generation count
 void check_operation(); // check operation count
 
 // final report
-void report_best_solution(); // reports the final best solution
+void report_result(); // reports the final best solution
+float get_mean(); // gets mean quality of population
+float get_standard_deviation(); // gets standard deviation of population quality
 
 // test & print functions
 void print_chromosome(const Chromosome* ch);
 void print_population();
 void print_graph();
+void print_result();
 void test_selection();
 void test_crossover();
 void test_mutation();
@@ -82,27 +124,77 @@ void test_replacement();
  * Function implementations
  */
 
+void calculate_fitness()
+{
+    int worst_cost = population[0].quality;
+    int best_cost = population[n-1].quality;
+
+    // flipped original formula to encode quality -> cost
+    for(int i=0; i<n; i++){
+        fitness[i] = (float)((population[i].quality - worst_cost) + (best_cost - worst_cost)) / (float)(4 - 1);
+        // k = 4 (maybe need to tuned?)
+    }
+}
+
 void selection(int &p1, int &p2)
 {
-    /*
-     * roulette wheel algorithm?
-     */
-
-    /*
-     * random picking of two parents
-    */
-
     int temp_p1, temp_p2;
+    temp_p1 = temp_p2 = -1;
 
-    temp_p1 = rand() % n; // get random index of population to select parent
-    do{
-        temp_p2 = rand() % n; // p1,p2 must be different
-    }while(temp_p1==temp_p2);
+    if(selectionType == ROULETTE_WHEEL)
+    {
+        /*
+        * roulette wheel algorithm
+        */
+        qsort(population, n, sizeof(Chromosome), compare_quality);
+        calculate_fitness();
 
-    p1 = temp_p1;
-    p2 = temp_p2;
+        float sumOfFitness = 0.0;
+        for(int i=0; i<n; i++){
+            sumOfFitness += fitness[i];
+        }
 
-    // TODO: note; maybe need to change selection algorithm to random
+        int point = rand() % ((int)sumOfFitness - 1);
+        int sum = 0;
+        for(int i=0; i<n; i++){
+            sum = sum + (int)fitness[i] + 1;
+            if(point < sum){
+                temp_p1 = i;
+                break;
+            }
+        }
+        if (temp_p1 == -1) cerr << "error on rw selection 1" << endl;
+
+        do{
+            point = rand() % ((int)sumOfFitness - 1);
+            sum = 0;
+            for(int i=0; i<n; i++){
+                sum = sum + (int)fitness[i] + 1;
+                if(point < sum){
+                    temp_p2 = i;
+                    break;
+                }
+            }
+            if (temp_p2 == -1) cerr << "error on rw selection 2" << endl;
+        }while(temp_p1==temp_p2);
+
+        p1 = temp_p1;
+        p2 = temp_p2;
+    }
+    else if (selectionType == RANDOM)
+    {
+        /*
+        * random pick of two parents
+        */
+        temp_p1 = rand() % n; // get random index of population to select parent
+        do{
+            temp_p2 = rand() % n; // p1,p2 must be different
+        }while(temp_p1==temp_p2);
+
+        p1 = temp_p1;
+        p2 = temp_p2;
+    }
+
 }
 
 void crossover(const Chromosome &p1, const Chromosome &p2, Chromosome &offspring)
@@ -180,11 +272,11 @@ void replacement(Chromosome* offsprings)
 {
     /*
      * genitor-style replacement (replace worst k solutions with offsprings)
-     * TODO: finish this impl
      */
 
     // 1. sort solutions by quality
-    qsort(population, n, sizeof(Chromosome), compare_quality);
+    if(selectionType != ROULETTE_WHEEL) // if is not already sorted
+        qsort(population, n, sizeof(Chromosome), compare_quality);
 
     // 2. replace first k arrays with offsprings
     for(int i=0; i<k; i++)
@@ -192,14 +284,54 @@ void replacement(Chromosome* offsprings)
 
 }
 
-void check_timeout()
+bool check_timeout()
 {
-    // nom nom ...    
+    /*
+     * timer to check the time time constraint
+     * true - over timeout / false - under timeout
+     */
+
+    currentTime = clock();
+    float timeDuration = (currentTime - startTime) / CLOCKS_PER_SEC;
+    return (timeDuration > timeConstraint);
+
 }
 
-void report_best_solution()
+float get_mean()
 {
-    // nom nom ...        
+    int sum = 0;
+
+    for(int i=0; i<n; i++){
+        sum+=population[i].quality;
+    }
+
+    return (float)sum/(float)n;
+}
+
+float get_standard_deviation()
+{
+    int sum = 0;
+    for(int i=0; i<n; i++){
+        sum+=population[i].quality;
+    }
+
+    float mean = (float)sum/(float)n;
+    float sqsum = 0.0;
+    for(int i=0; i<n; i++){
+        sqsum += (abs(population[i].quality - mean) * abs(population[i].quality - mean));
+    }
+
+    return sqrt(sqsum / (n-1));
+}
+
+void report_result()
+{
+    printf("========== print final result ==========\n");
+    printf("Generations evolved: %d\n",generation_count);
+    printf("Best quality: %d\n",population[n-1].quality);
+    printf("Mean quality: %f\n",get_mean());
+    printf("Standard deviation: %f\n",get_standard_deviation());
+    printf("======================================\n\n");
 }
 
 void qualify_chromosome(Chromosome &ch)
@@ -240,8 +372,6 @@ void init_popluation()
 void ga()
 {
 
-    bool stopCondition = false;
-
     do {
 
         Chromosome offsprings[k];
@@ -255,13 +385,11 @@ void ga()
             mutation(offsprings[i]);
         }
         replacement(offsprings);
+        generation_count++;        
 
-        // TODO: stopCondition must be tuned in this loop
-        check_timeout();
+    } while (!check_timeout());
 
-    } while (!stopCondition);
-
-    report_best_solution();
+    report_result();
 
 }
 
@@ -352,9 +480,23 @@ void test_mutation(){
 }
 
 void test_replacement(){
+     
+    // replacement test
+    // replace k 0000... chromosomes with population
+    Chromosome test_chs[k];
+    memset(test_chs, 0x00, sizeof(Chromosome)*k);
+    for(int j=0; j>k; j++){
 
-    // need to make graph file reader first...
+        for(int i=0; i<vertexNum; i++){
+            test_chs[j].gene[i] = 0;
+        }
+        qualify_chromosome(test_chs[j]);
 
+    }
+
+    replacement(test_chs);
+    print_population();
+ 
 }
 
 
@@ -384,43 +526,32 @@ void read_file(char* fileName){
 
 void init()
 {
-    // TODO: reset mem of the edges[] & Chromosome.gene
+    // TODO: reset mem of the edges[] & Chromosome.gene (maybe?)
     // is it OK to give longer size of the array and use less?
 
     // marks start time of the program
-    clock_t startTime = clock();
+    startTime = clock();
 
     // sets random timer to srand()
     srand(time(NULL));
 
     init_popluation();
-    print_population(); // just for test.
+    //print_population(); // just for test.
+
+    generation_count = 0;
 
 }
 
+void print_result()
+{
+    for(int i=0; i<vertexNum; i++){
+        if(population[n-1].gene[i]) printf("%d ",i+1);
+    }
+}
 
 // just for tests. need to be replaced
 int main(int argc, char** argv)
 {
-
-    // TODO: this should be put on init function
-/* 
-    while(true){
-
-        clock_t currentTime = clock();
-
-        // do nothing ...
-
-        float timeDuration = (currentTime - startTime) / CLOCKS_PER_SEC;
-
-        printf("Time duration : %f\n", timeDuration);    
-
-        if (timeDuration > 5.0) {
-            printf("Halt program! Time duration : %f", timeDuration);    
-            return 0;
-        }
-
-    } */
 
     /*
      * File read test
@@ -433,12 +564,15 @@ int main(int argc, char** argv)
 
     read_file(argv[1]);
     init();
+    ga();
+    print_population();
+    report_result();
+    print_result();
 
     //print_graph();
     //test_selection();
     //test_crossover();
     //test_mutation();
-
 
     return 0;
 
