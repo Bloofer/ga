@@ -6,12 +6,12 @@ using namespace std;
  */
 
 // GA variables
-const int maxVertexNum = 1000;
-const int maxEdgeNum = 10000;
+const int maxVertexNum = 500;
+const int maxEdgeNum = 5000;
 const int timeConstraint = 175.0;
 
-const int n = 20; // size of population (need tuning?)
-const int k = 4;  // size of replacement (need tuning?)
+const int n = 100; // size of population (need tuning?)
+const int k = 20;  // size of replacement (need tuning?)
 
 // input informations. inititalized on read_file() 
 int vertexNum;
@@ -48,7 +48,7 @@ typedef enum{
     RANDOM, // random pick of two parents
     ROULETTE_WHEEL // selection based on fitness function
 } Selection_strategy;
-Selection_strategy selectionType = RANDOM;
+Selection_strategy selectionType = ROULETTE_WHEEL;
 
 typedef enum{
     ONE_POINT, // random one point crossover
@@ -200,9 +200,10 @@ void selection(int &p1, int &p2)
 void crossover(const Chromosome &p1, const Chromosome &p2, Chromosome &offspring)
 {
     /*
-     * random 1-point crossover
+     * 1-point crossover
      */
     
+    // TODO: maybe remove memset?
     // 1. set the initial memory of the offspring
     memset(&offspring, 0x00, sizeof(offspring));
 
@@ -354,7 +355,7 @@ void qualify_chromosome(Chromosome &ch)
 
 void init_chromosome(Chromosome& ch)
 {
-    for(int i=0; i<edgeNum; i++){
+    for(int i=0; i<vertexNum; i++){
         ch.gene[i] = rand()%2;
     }
     qualify_chromosome(ch);
@@ -375,6 +376,7 @@ void ga()
     do {
 
         Chromosome offsprings[k];
+        // TODO: maybe remove memset?
         memset( offsprings, 0, sizeof(Chromosome)*k ); // initialize the size of offsprings
 
         // iterate ga operators for k times
@@ -484,6 +486,7 @@ void test_replacement(){
     // replacement test
     // replace k 0000... chromosomes with population
     Chromosome test_chs[k];
+    // TODO: maybe remove memset?
     memset(test_chs, 0x00, sizeof(Chromosome)*k);
     for(int j=0; j>k; j++){
 
@@ -535,6 +538,8 @@ void init()
     // sets random timer to srand()
     srand(time(NULL));
 
+    // TODO: maybe remove memset?
+    memset( population, 0, sizeof(Chromosome)*n );
     init_popluation();
     //print_population(); // just for test.
 
