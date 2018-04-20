@@ -10,8 +10,8 @@ const int maxVertexNum = 500;
 const int maxEdgeNum = 5000;
 const int timeConstraint = 175.0;
 
-const int n = 100; // size of population (need tuning?)
-const int k = 20;  // size of replacement (need tuning?)
+const int n = 20; // size of population (need tuning?)
+const int k = 4;  // size of replacement (need tuning?)
 
 // input informations. inititalized on read_file() 
 int vertexNum;
@@ -165,18 +165,19 @@ void selection(int &p1, int &p2)
         }
         if (temp_p1 == -1) cerr << "error on rw selection 1" << endl;
 
-        do{
-            point = rand() % ((int)sumOfFitness - 1);
-            sum = 0;
-            for(int i=0; i<n; i++){
-                sum = sum + (int)fitness[i] + 1;
-                if(point < sum){
-                    temp_p2 = i;
-                    break;
-                }
+        point = rand() % ((int)sumOfFitness - 1);
+        sum = 0;
+        for(int i=0; i<n; i++){
+            sum = sum + (int)fitness[i] + 1;
+            if(point < sum){
+                temp_p2 = i;
+                break;
             }
-            if (temp_p2 == -1) cerr << "error on rw selection 2" << endl;
-        }while(temp_p1==temp_p2);
+        }
+        if (temp_p2 == -1) cerr << "error on rw selection 2" << endl;
+    
+        if(temp_p1==temp_p2 && temp_p2>0) temp_p2--;
+        else temp_p2++;
 
         p1 = temp_p1;
         p2 = temp_p2;
