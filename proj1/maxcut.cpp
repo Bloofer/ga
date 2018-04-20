@@ -8,7 +8,7 @@ using namespace std;
 // GA variables
 const int maxVertexNum = 500;
 const int maxEdgeNum = 5000;
-const int timeConstraint = 175.0;
+const int timeConstraint = 10.0;
 
 const int n = 20; // size of population (need tuning?)
 const int k = 4;  // size of replacement (need tuning?)
@@ -206,31 +206,74 @@ void crossover(const Chromosome &p1, const Chromosome &p2, Chromosome &offspring
     
     // TODO: maybe remove memset?
     // 1. set the initial memory of the offspring
-    memset(&offspring, 0x00, sizeof(offspring));
+/*     memset(&offspring, 0x00, sizeof(offspring)); */
 
     Chromosome temp_o1, temp_o2;
-    memset(&temp_o1, 0x00, sizeof(temp_o1));
-    memset(&temp_o2, 0x00, sizeof(temp_o2));
+/*     memset(&temp_o1, 0x00, sizeof(temp_o1));
+    memset(&temp_o2, 0x00, sizeof(temp_o2)); */
 
-    // 2. get the random point of the gene
-    int random_point = rand() % (vertexNum - 1); // possible cut points are n-1
+    if (crossoverType == ONE_POINT)
+    {
 
-    // 3. make crossover of from parents - make two crossovers
-    memcpy(temp_o1.gene, p1.gene, sizeof(bool) * vertexNum);
-    memcpy(temp_o1.gene, p2.gene, sizeof(bool) * (random_point+1));
+        // 2. get the random point of the gene
+        int random_point = rand() % (vertexNum - 1); // possible cut points are n-1
 
-    memcpy(temp_o2.gene, p2.gene, sizeof(bool) * vertexNum);
-    memcpy(temp_o2.gene, p1.gene, sizeof(bool) * (random_point+1));
+        // 3. make crossover of from parents - make two crossovers
+        memcpy(temp_o1.gene, p1.gene, sizeof(bool) * vertexNum);
+        memcpy(temp_o1.gene, p2.gene, sizeof(bool) * (random_point+1));
 
-    // 4. qualify two offsprings
-    qualify_chromosome(temp_o1);
-    qualify_chromosome(temp_o2);
+        memcpy(temp_o2.gene, p2.gene, sizeof(bool) * vertexNum);
+        memcpy(temp_o2.gene, p1.gene, sizeof(bool) * (random_point+1));
 
-    // 5. apply better one
-    if(temp_o1.quality > temp_o2.quality)
-        memcpy(&offspring, &temp_o1, sizeof(offspring));
-    else
-        memcpy(&offspring, &temp_o2, sizeof(offspring));
+        // 4. qualify two offsprings
+        qualify_chromosome(temp_o1);
+        qualify_chromosome(temp_o2);
+
+        // 5. apply better one
+        if(temp_o1.quality > temp_o2.quality)
+            memcpy(&offspring, &temp_o1, sizeof(offspring));
+        else
+            memcpy(&offspring, &temp_o2, sizeof(offspring));
+
+    }
+    else if (crossoverType == TWO_POINT)
+    {
+
+        // 2. get the random point of the gene
+        int random_point1 = rand() % (vertexNum - 1); // possible cut points are n-1
+        int random_point2;
+        do{
+            random_point2 = rand() % (vertexNum - 1); // p1,p2 must be different
+        }while(random_point1==random_point2);
+
+        int temp_point;
+        // 
+        if (random_point1 > random_point2){
+            temp_point = random_point2;
+            random_point2 = random_point1;
+            random_point1 = temp_point;
+        }
+
+        // 3. make crossover of from parents - make two crossovers
+        memcpy(temp_o1.gene, p1.gene, sizeof(bool) * vertexNum);
+        memcpy(temp_o1.gene, p2.gene, sizeof(bool) * (random_point2+1));
+        memcpy(temp_o1.gene, p1.gene, sizeof(bool) * (random_point1+1));
+
+        memcpy(temp_o2.gene, p2.gene, sizeof(bool) * vertexNum);
+        memcpy(temp_o2.gene, p1.gene, sizeof(bool) * (random_point2+1));
+        memcpy(temp_o2.gene, p2.gene, sizeof(bool) * (random_point1+1));
+
+        // 4. qualify two offsprings
+        qualify_chromosome(temp_o1);
+        qualify_chromosome(temp_o2);
+
+        // 5. apply better one
+        if(temp_o1.quality > temp_o2.quality)
+            memcpy(&offspring, &temp_o1, sizeof(offspring));
+        else
+            memcpy(&offspring, &temp_o2, sizeof(offspring));
+
+    }
 
 }
 
@@ -378,8 +421,8 @@ void ga()
 
         Chromosome offsprings[k];
         // TODO: maybe remove memset?
-        memset( offsprings, 0, sizeof(Chromosome)*k ); // initialize the size of offsprings
-
+/*         memset( offsprings, 0, sizeof(Chromosome)*k ); // initialize the size of offsprings
+ */
         // iterate ga operators for k times
         for (int i=0; i<k; i++){
             int p1, p2;
@@ -488,8 +531,8 @@ void test_replacement(){
     // replace k 0000... chromosomes with population
     Chromosome test_chs[k];
     // TODO: maybe remove memset?
-    memset(test_chs, 0x00, sizeof(Chromosome)*k);
-    for(int j=0; j>k; j++){
+/*     memset(test_chs, 0x00, sizeof(Chromosome)*k);
+ */    for(int j=0; j>k; j++){
 
         for(int i=0; i<vertexNum; i++){
             test_chs[j].gene[i] = 0;
@@ -540,8 +583,8 @@ void init()
     srand(time(NULL));
 
     // TODO: maybe remove memset?
-    memset( population, 0, sizeof(Chromosome)*n );
-    init_popluation();
+/*     memset( population, 0, sizeof(Chromosome)*n );
+ */    init_popluation();
     //print_population(); // just for test.
 
     generation_count = 0;

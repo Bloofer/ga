@@ -3,6 +3,6 @@ for f in $FILES
 do
   echo "Processing $f"
   filename=$(basename "$f")
-  /home/yang/Sources/ga/proj1/maxcut $f > "7_ga_20_4_1p_rw_noopt/result1_$filename"
+  /home/yang/Sources/ga/proj1/maxcut $f > "8_ga_20_4_2p_rw_noopt/result1_$filename"
 done
 
