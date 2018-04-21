@@ -8,7 +8,7 @@ using namespace std;
 // GA variables
 const int maxVertexNum = 500;
 const int maxEdgeNum = 5000;
-const int timeConstraint = 10.0;
+const int timeConstraint = 175.0;
 
 const int n = 20; // size of population (need tuning?)
 const int k = 4;  // size of replacement (need tuning?)
@@ -414,6 +414,19 @@ void init_popluation()
     }
 }
 
+void print_generation_quality()
+{
+    float average = 0.0;
+    int sum = 0;
+    for(int i=0; i<n; i++){
+        sum += population[i].quality;
+    }
+    average = (float)sum / n;
+
+    // prints best | average
+    printf("%d %f\n",population[n-1].quality, average);
+}
+
 void ga()
 {
 
@@ -433,9 +446,12 @@ void ga()
         replacement(offsprings);
         generation_count++;        
 
+        // This should be removed after logging
+        print_generation_quality();
+
     } while (!check_timeout());
 
-    report_result();
+    //report_result();
 
 }
 
@@ -614,9 +630,9 @@ int main(int argc, char** argv)
     read_file(argv[1]);
     init();
     ga();
-    print_population();
-    report_result();
-    print_result();
+    //print_population();
+    //report_result();
+    //print_result();
 
     //print_graph();
     //test_selection();
